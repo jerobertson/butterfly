@@ -49,13 +49,15 @@ def change_lights(room, now, is_dimmer=False):
     lights = get_lux_reactive_lights(room)
 
     to_change = {}
+    brightness_map = {}
     for light in lights:
-        new_brightness = get_new_brightness(room, light, is_dimmer)
+        current_brightness, new_brightness = get_current_and_new_brightness(room, light, is_dimmer)
         if new_brightness:
             to_change.setdefault(new_brightness,[]).append(light)
+            brightness_map[new_brightness] = current_brightness
 
     log.debug(f"Butterfly is transitioning the following lights in '{room}': {to_change}")
-    transition_lights(room, to_change, now)
+    transition_lights(room, to_change, brightness_map, now)
 
 
 def get_lux_reactive_lights(room):
@@ -65,7 +67,7 @@ def get_lux_reactive_lights(room):
     return [light for light in motion_activated_lights if light in temp_controlled_lights and light not in hs_controlled_lights]
 
 
-def get_new_brightness(room, light, is_dimmer=False):
+def get_current_and_new_brightness(room, light, is_dimmer=False):
     try:
         current_brightness = int(state.getattr(light)["brightness"])
         max_brightness = config_manager.get_light_max_brightness(room, light)
@@ -73,20 +75,21 @@ def get_new_brightness(room, light, is_dimmer=False):
         new_brightness = current_brightness * 0.9 if is_dimmer else current_brightness / 0.9
         clamped_brightness = int(max(min(new_brightness, max_brightness), min_brightness))
         if clamped_brightness != current_brightness:
-            return clamped_brightness
+            return (current_brightness, clamped_brightness)
+        else:
+            return (None, None)
     except:
-        return None
+        return (None, None)
 
 
-def transition_lights(room, to_change, initial_timestamp):
-    transition_time = 60
+def transition_lights(room, to_change, brightness_map, initial_timestamp):
+    transition_time = 30
     step = 3
 
     i = 0
     while i < transition_time and state_manager.get_room_state(room, initial_timestamp) == "on":
-        for brightness in to_change.keys():
-            lights = to_change[brightness]
-            new_brightness = brightness * (transition_time-i-step)/transition_time
-            # service.call("light", "turn_on", entity_id=lights, brightness=new_brightness, transition=step-1)
+        for target_brightness in to_change.keys():
+            lights = to_change[target_brightness]
+            new_brightness = (target_brightness - brightness_map[target_brightness]) * ((i := i + step) / transition_time) + brightness_map[target_brightness]
+            service.call("light", "turn_on", entity_id=lights, brightness=new_brightness, transition=step-1)
         task.sleep(step)
-        i += step
