@@ -52,7 +52,7 @@ def change_lights(room, now, is_dimmer=False):
     for light in lights:
         new_brightness = get_new_brightness(room, light, is_dimmer)
         if new_brightness:
-            to_change.setdefault(brightness,[]).append(light)
+            to_change.setdefault(new_brightness,[]).append(light)
 
     log.debug(f"Butterfly is transitioning the following lights in '{room}': {to_change}")
     transition_lights(room, to_change, now)
@@ -87,9 +87,6 @@ def transition_lights(room, to_change, initial_timestamp):
         for brightness in to_change.keys():
             lights = to_change[brightness]
             new_brightness = brightness * (transition_time-i-step)/transition_time
-            service.call("light", "turn_on", entity_id=lights, brightness=new_brightness, transition=step-1)
+            # service.call("light", "turn_on", entity_id=lights, brightness=new_brightness, transition=step-1)
         task.sleep(step)
         i += step
-
-    # for brightness in to_change.keys():
-    #     service.call("light", "turn_on", entity_id=to_change[brightness], brightness=brightness, transition=60)
