@@ -64,6 +64,9 @@ DEFAULT_ROOM = {
 
 DEFAULT_TRANSITION_TIME = 60
 
+# TODO: Cache this properly in time file when it's created
+SUNSET = datetime.datetime.strptime(r.sub(r"+\1\2", state.get("sensor.sun_next_setting")), "%Y-%m-%dT%H:%M:%S%z").time()
+
 @pyscript_compile
 def init(config):
     global APP_CONFIG
@@ -81,15 +84,14 @@ def lerp_times(now, t1, t2):
     return ease_in_out_quad((now - t1) / (t2 - t1))
 
 
+# TODO: Extract get_time_string and helper functions into its own file
+@pyscript_compile
 def get_time_string():
     now = datetime.datetime.combine(datetime.date.min, datetime.datetime.now().time())
 
-    sunset_str = r.sub(r"+\1\2", state.get("sensor.sun_next_setting"))
-    sunset = datetime.datetime.strptime(sunset_str, "%Y-%m-%dT%H:%M:%S%z").time()
-
     morning = datetime.datetime.combine(datetime.date.min, datetime.time(4))
     day = datetime.datetime.combine(datetime.date.min, datetime.time(10))
-    evening = datetime.datetime.combine(datetime.date.min, min(sunset, datetime.time(17)))
+    evening = datetime.datetime.combine(datetime.date.min, min(SUNSET, datetime.time(17)))
     night = datetime.datetime.combine(datetime.date.min, datetime.time(21))
 
     if now < morning:
@@ -120,6 +122,7 @@ def get_lights(room):
         return []
 
 
+@pyscript_compile
 def get_light_config(room, light, key, needs_lerp=False):
     now, later, lerp = get_time_string()
     
@@ -148,6 +151,7 @@ def get_light_config_time(room, light, key, time):
             return room_value if room_value != None else DEFAULT_LIGHT[key][time]
 
 
+@pyscript_compile
 def get_room_config(room, key, needs_lerp=False):
     now, later, lerp = get_time_string()
     
@@ -181,14 +185,17 @@ def get_room_config_time(room, key, time):
                     return None
 
 
+@pyscript_compile
 def get_temp_controlled_lights(room):
     return [light for light in APP_CONFIG["rooms"][room]["lights"] if get_light_config(room, light, "temp_controlled")]
 
 
+@pyscript_compile
 def get_hs_controlled_lights(room):
     return [light for light in APP_CONFIG["rooms"][room]["lights"] if get_light_config(room, light, "hs") is not None]
 
 
+@pyscript_compile
 def get_motion_activated_lights(room):
     return [light for light in APP_CONFIG["rooms"][room]["lights"] if get_light_config(room, light, "motion_activated")]
 
@@ -208,6 +215,7 @@ def get_night_mode(room):
         return "ignore"
 
 
+@pyscript_compile
 def get_trigger_condition(room):
     motion_sensors = get_room_config(room, "motion_sensors")
     motion_sensors_condition = " not in ['off', 'unavailable'] or ".join(motion_sensors) + " not in ['off', 'unavailable']" if motion_sensors else "1 == 2"
@@ -215,16 +223,19 @@ def get_trigger_condition(room):
     return motion_sensors_condition
 
 
+@pyscript_compile
 def get_enablers_condition(room):
     motion_enablers = get_room_config(room, "motion_enablers")
     return " not in ['off', 'unavailable'] or ".join(motion_enablers) + " not in ['off', 'unavailable']" if motion_enablers else "1 == 1"
 
 
+@pyscript_compile
 def get_locks_condition(room):
     motion_locks = get_room_config(room, "motion_locks")
     return " in ['off', 'unavailable'] and ".join(motion_locks) + " in ['off', 'unavailable']" if motion_locks else "1 == 1"
 
 
+@pyscript_compile
 def get_activation_condition(room):
     enablers_condition = get_enablers_condition(room)
     locks_condition = get_locks_condition(room)
@@ -232,6 +243,7 @@ def get_activation_condition(room):
     return f"({enablers_condition}) and ({locks_condition})"
 
 
+@pyscript_compile
 def get_wait_conditon(room):
     try:
         return " == 'off' and ".join(get_room_config(room, "motion_sensors")) + " == 'off'"
