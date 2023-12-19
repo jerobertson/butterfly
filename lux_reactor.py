@@ -1,5 +1,6 @@
 import datetime
 
+@pyscript_compile
 def init(cm, sm, m):
     global config_manager
     global state_manager

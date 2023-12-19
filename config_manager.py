@@ -64,16 +64,19 @@ DEFAULT_ROOM = {
 
 DEFAULT_TRANSITION_TIME = 60
 
+@pyscript_compile
 def init(config):
     global APP_CONFIG
     APP_CONFIG = config
 
 
+@pyscript_compile
 def ease_in_out_quad(x):
     # https://easings.net/#easeInOutQuad
     return 2 * x * x if x < 0.5 else 1 - pow(-2 * x + 2, 2) / 2
 
 
+@pyscript_compile
 def lerp_times(now, t1, t2):
     return ease_in_out_quad((now - t1) / (t2 - t1))
 
@@ -101,6 +104,7 @@ def get_time_string():
         return ("night", "night", 0)
 
 
+@pyscript_compile
 def get_rooms():
     try:
         return [room for room in APP_CONFIG["rooms"]]
@@ -108,6 +112,7 @@ def get_rooms():
         return []
 
 
+@pyscript_compile
 def get_lights(room):
     try:
         return [light for light in APP_CONFIG["rooms"][room]["lights"]]
@@ -130,6 +135,7 @@ def get_light_config(room, light, key, needs_lerp=False):
         return now_val
 
 
+@pyscript_compile
 def get_light_config_time(room, light, key, time):
     try:
         return APP_CONFIG["rooms"][room]["lights"][light][key][time]
@@ -156,6 +162,8 @@ def get_room_config(room, key, needs_lerp=False):
     except:
         return now_val
 
+
+@pyscript_compile
 def get_room_config_time(room, key, time):
     try: 
         return APP_CONFIG["rooms"][room][key][time]
@@ -185,6 +193,7 @@ def get_motion_activated_lights(room):
     return [light for light in APP_CONFIG["rooms"][room]["lights"] if get_light_config(room, light, "motion_activated")]
 
 
+@pyscript_compile
 def get_tv_config(room, key):
     try:
         return APP_CONFIG["rooms"][room]["tv"][key]
@@ -230,6 +239,7 @@ def get_wait_conditon(room):
         return False
 
 
+@pyscript_compile
 def get_transition_time(room):
     try:
         return APP_CONFIG["rooms"][room]["transition_time"]

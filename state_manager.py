@@ -11,6 +11,7 @@ def init(cm):
         invalidate_cache(room)
 
 
+@pyscript_compile
 def invalidate_cache(room):
     STATE[room] = {}
     STATE[room]["last_motion"] = datetime.datetime.fromtimestamp(0)
@@ -24,10 +25,12 @@ def get_room_lux(room):
         return 0
 
 
+@pyscript_compile
 def put_last_motion_detected(room, time):
     STATE[room]["last_motion"] = time
 
 
+@pyscript_compile
 def get_last_motion_detected(room):
     return STATE[room]["last_motion"]
 
@@ -55,5 +58,6 @@ def store_lights(room):
     STATE[room]["lights"] = to_store
 
 
+@pyscript_compile
 def retrieve_lights(room):
     return STATE[room]["lights"]
