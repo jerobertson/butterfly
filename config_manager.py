@@ -69,8 +69,13 @@ def init(config):
     APP_CONFIG = config
 
 
+def ease_in_out_quad(x):
+    # https://easings.net/#easeInOutQuad
+    return 2 * x * x if x < 0.5 else 1 - pow(-2 * x + 2, 2) / 2
+
+
 def lerp_times(now, t1, t2):
-    return (now - t1) / (t2 - t1)
+    return ease_in_out_quad((now - t1) / (t2 - t1))
 
 
 def get_time_string():
