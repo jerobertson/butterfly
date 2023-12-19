@@ -27,8 +27,7 @@ def react(room):
         log.debug(f"Butterfly won't adjust light levels; '{room}' is not occupied.")
         return
 
-    time = config_manager.get_time_string()
-    target = config_manager.get_lux_target(room, time)
+    target = config_manager.get_room_config(room, "lux_targets")
     current = state_manager.get_room_lux(room)
 
     log.debug(f"Butterfly is reacting to lux - C:{current}, T:{target}, R:{room}")
@@ -70,7 +69,7 @@ def get_lux_reactive_lights(room):
 def get_current_and_new_brightness(room, light, is_dimmer=False):
     try:
         current_brightness = int(state.getattr(light)["brightness"])
-        max_brightness = config_manager.get_light_max_brightness(room, light)
+        max_brightness = config_manager.get_light_config(room, light, "max_brightness")
         min_brightness = 25
         new_brightness = current_brightness * 0.9 if is_dimmer else current_brightness / 0.9
         clamped_brightness = int(max(min(new_brightness, max_brightness), min_brightness))
@@ -84,7 +83,7 @@ def get_current_and_new_brightness(room, light, is_dimmer=False):
 
 def transition_lights(room, to_change, brightness_map, initial_timestamp):
     transition_time = 30
-    step = 3
+    step = 6
 
     i = 0
     while i < transition_time and state_manager.get_room_state(room, initial_timestamp) == "on":

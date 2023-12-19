@@ -37,8 +37,7 @@ def is_motion_disabled(room, night_mode):
 
 
 def is_lux_met(room):
-    time = config_manager.get_time_string()
-    target = config_manager.get_lux_target(room, time)
+    target = config_manager.get_room_config(room, "lux_targets")
     current = state_manager.get_room_lux(room)
     return current >= target
 
@@ -47,7 +46,7 @@ def turn_lights_on(room, night_mode, initial_timestamp):
     night_mode_brightness = 3
     night_mode_temperature = 2000
 
-    temperature = config_manager.get_room_temperature(room)
+    temperature = config_manager.get_room_config(room, "temperature")
 
     temp_controlled_lights = config_manager.get_temp_controlled_lights(room)
     hs_controlled_lights = config_manager.get_hs_controlled_lights(room)
@@ -69,19 +68,19 @@ def turn_lights_on(room, night_mode, initial_timestamp):
         to_enable = {}
         # temp lights
         for light in motion_activated_temp_controlled_lights:
-            brightness = config_manager.get_light_max_brightness(room, light)
+            brightness = config_manager.get_light_config(room, light, "max_brightness")
             to_enable.setdefault(brightness,[]).append(light)
         for brightness in to_enable.keys():
             service.call("light", "turn_on", entity_id=to_enable[brightness], brightness=brightness, kelvin=temperature, transition=1)
         # hs lights
         for light in motion_activated_hs_controlled_lights:
-            brightness = config_manager.get_light_max_brightness(room, light)
+            brightness = config_manager.get_light_config(room, light, "max_brightness")
             hs = config_manager.get_light_config(room, light, "hs")
             service.call("light", "turn_on", entity_id=light, brightness=brightness, hs_color=hs, transition=1)
         # other lights
         to_enable = {}
         for light in motion_activated_other_lights:
-            brightness = config_manager.get_light_max_brightness(room, light)
+            brightness = config_manager.get_light_config(room, light, "max_brightness")
             to_enable.setdefault(brightness,[]).append(light)
         for brightness in to_enable.keys():
             service.call("light", "turn_on", entity_id=to_enable[brightness], brightness=brightness, transition=1)

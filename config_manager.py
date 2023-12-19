@@ -41,7 +41,7 @@ DEFAULT_TV = {
 }
 
 DEFAULT_ROOM = {
-    "lights": [],
+    "lights": {},
     "motion_sensors": [],
     "motion_locks": [],
     "motion_enablers": [],
@@ -85,6 +85,41 @@ def get_time_string():
         return "night"
 
 
+def lerp_times(now, t1, t2):
+    return (now - t1) / (t2 - t1)
+
+
+def get_better_time_string():
+    # TODO WIP
+    now = datetime.datetime.now().time()
+
+    sunset_str = r.sub(r"+\1\2", state.get("sensor.sun_next_setting"))
+    sunset = datetime.datetime.strptime(sunset_str, "%Y-%m-%dT%H:%M:%S%z").time()
+
+    morning = datetime.datetime.combine(datetime.date.min, datetime.time(4))
+    day = datetime.datetime.combine(datetime.date.min, datetime.time(10))
+    evening = datetime.datetime.combine(datetime.date.min, min(sunset, datetime.time(17)))
+    night = datetime.datetime.combine(datetime.date.min, datetime.time(21))
+
+    if now < morning:
+        # treat as night"
+        pass
+    elif now < day:
+        lerp = lerp_times(now, morning, day)
+    elif now < evening:
+        lerp = lerp_times(now, day, evening)
+
+        # now_val = get_value(day)
+        # later_val = get_value(evening)
+        
+        # (later_val - now_val) * interpolation + now_val
+    elif now < night:
+        lerp = lerp_times(now, evening, night)
+    else:
+        # treat as night
+        pass
+
+
 def get_rooms():
     try:
         return [room for room in APP_CONFIG["rooms"]]
@@ -108,14 +143,25 @@ def get_light_config(room, light, key):
             if isinstance(APP_CONFIG["rooms"][room]["lights"][light][key], dict): raise Exception
             return APP_CONFIG["rooms"][room]["lights"][light][key]
         except:
-            try: 
-                return APP_CONFIG["rooms"][room][key][time]
+            try:
+                return get_better_room_config(room, key)
             except:
-                try:
-                    if isinstance(APP_CONFIG["rooms"][room][key], dict): raise Exception
-                    return APP_CONFIG["rooms"][room][key]
-                except:
-                    return DEFAULT_LIGHT[key][time]
+                return DEFAULT_LIGHT[key][time]
+
+
+def get_room_config(room, key):
+    time = get_time_string()
+    try: 
+        return APP_CONFIG["rooms"][room][key][time]
+    except:
+        try:
+            if isinstance(APP_CONFIG["rooms"][room][key], dict): raise Exception
+            return APP_CONFIG["rooms"][room][key]
+        except:
+            try:
+                return DEFAULT_ROOM[key][time]
+            except:
+                return DEFAULT_ROOM[key]
 
 
 def get_temp_controlled_lights(room):
@@ -128,41 +174,6 @@ def get_hs_controlled_lights(room):
 
 def get_motion_activated_lights(room):
     return [light for light in APP_CONFIG["rooms"][room]["lights"] if get_light_config(room, light, "motion_activated")]
-
-
-def get_light_max_brightness(room, light):
-    try:
-        return int(APP_CONFIG["rooms"][room]["lights"][light]["max_brightness"][get_time_string()])
-    except:
-        pass
-
-    try:
-        return int(APP_CONFIG["rooms"][room]["lights"][light]["max_brightness"])
-    except:
-        pass
-
-    return int(DEFAULT_LIGHT["max_brightness"][get_time_string()])
-
-
-def get_room_temperature(room):
-    try:
-        return int(APP_CONFIG["rooms"][room]["temperature"][get_time_string()])
-    except:
-        pass
-
-    try:
-        return int(APP_CONFIG["rooms"][room]["temperature"])
-    except:
-        pass
-
-    return int(DEFAULT_ROOM["temperature"][get_time_string()])
-
-
-def get_room_config(room, key):
-    try:
-        return APP_CONFIG["rooms"][room][key]
-    except:
-        return DEFAULT_ROOM[key]
 
 
 def get_tv_config(room, key):
@@ -215,10 +226,3 @@ def get_transition_time(room):
         return APP_CONFIG["rooms"][room]["transition_time"]
     except:
         return DEFAULT_TRANSITION_TIME
-
-
-def get_lux_target(room, time):
-    try:
-        return APP_CONFIG["rooms"][room]["lux_targets"][time]
-    except:
-        return DEFAULT_ROOM["lux_targets"][time]
