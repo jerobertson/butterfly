@@ -37,7 +37,7 @@ def is_motion_disabled(room, night_mode):
 
 
 def is_lux_met(room):
-    target = config_manager.get_room_config(room, "lux_targets")
+    target = config_manager.get_room_config(room, "lux_targets", needs_lerp=True)
     current = state_manager.get_room_lux(room)
     return current >= target
 

@@ -27,7 +27,7 @@ def react(room):
         log.debug(f"Butterfly won't adjust light levels; '{room}' is not occupied.")
         return
 
-    target = config_manager.get_room_config(room, "lux_targets")
+    target = config_manager.get_room_config(room, "lux_targets", needs_lerp=True)
     current = state_manager.get_room_lux(room)
 
     log.debug(f"Butterfly is reacting to lux - C:{current}, T:{target}, R:{room}")

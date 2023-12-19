@@ -73,7 +73,6 @@ def lerp_times(now, t1, t2):
     return (now - t1) / (t2 - t1)
 
 
-# TODO: Evaluate whole codebase and figure out what does and doesn't need a lerp
 def get_time_string():
     now = datetime.datetime.combine(datetime.date.min, datetime.datetime.now().time())
 
