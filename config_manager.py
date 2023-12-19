@@ -69,29 +69,13 @@ def init(config):
     APP_CONFIG = config
 
 
-def get_time_string():
-    now = int(datetime.datetime.now().strftime("%H"))
-    sunset_str = r.sub(r"+\1\2", state.get("sensor.sun_next_setting"))
-    sunset = int(datetime.datetime.strptime(sunset_str, "%Y-%m-%dT%H:%M:%S%z").strftime("%H")) + 1
-    if now < 4: 
-        return "night"
-    elif now < 10:
-        return "morning"
-    elif now < min(sunset, 17):
-        return "day"
-    elif now < 21:
-        return "evening"
-    else:
-        return "night"
-
-
 def lerp_times(now, t1, t2):
     return (now - t1) / (t2 - t1)
 
 
-def get_better_time_string():
-    # TODO WIP
-    now = datetime.datetime.now().time()
+# TODO: Evaluate whole codebase and figure out what does and doesn't need a lerp
+def get_time_string():
+    now = datetime.datetime.combine(datetime.date.min, datetime.datetime.now().time())
 
     sunset_str = r.sub(r"+\1\2", state.get("sensor.sun_next_setting"))
     sunset = datetime.datetime.strptime(sunset_str, "%Y-%m-%dT%H:%M:%S%z").time()
@@ -102,22 +86,15 @@ def get_better_time_string():
     night = datetime.datetime.combine(datetime.date.min, datetime.time(21))
 
     if now < morning:
-        # treat as night"
-        pass
+        return ("night", "night", 0)
     elif now < day:
-        lerp = lerp_times(now, morning, day)
+        return ("morning", "day", lerp_times(now, morning, day))
     elif now < evening:
-        lerp = lerp_times(now, day, evening)
-
-        # now_val = get_value(day)
-        # later_val = get_value(evening)
-        
-        # (later_val - now_val) * interpolation + now_val
+        return ("day", "evening", lerp_times(now, day, evening))
     elif now < night:
-        lerp = lerp_times(now, evening, night)
+        return ("evening", "night", lerp_times(now, evening, night))
     else:
-        # treat as night
-        pass
+        return ("night", "night", 0)
 
 
 def get_rooms():
@@ -134,8 +111,22 @@ def get_lights(room):
         return []
 
 
-def get_light_config(room, light, key):
-    time = get_time_string()
+def get_light_config(room, light, key, needs_lerp=False):
+    now, later, lerp = get_time_string()
+    
+    if not needs_lerp:
+        return get_light_config_time(room, light, key, now)
+
+    now_val = get_light_config_time(room, light, key, now)
+    later_val = get_light_config_time(room, light, key, later)
+
+    try:
+        return int((later_val - now_val) * lerp + now_val)
+    except:
+        return now_val
+
+
+def get_light_config_time(room, light, key, time):
     try:
         return APP_CONFIG["rooms"][room]["lights"][light][key][time]
     except:
@@ -143,14 +134,25 @@ def get_light_config(room, light, key):
             if isinstance(APP_CONFIG["rooms"][room]["lights"][light][key], dict): raise Exception
             return APP_CONFIG["rooms"][room]["lights"][light][key]
         except:
-            try:
-                return get_better_room_config(room, key)
-            except:
-                return DEFAULT_LIGHT[key][time]
+            room_value = get_room_config_time(room, key, time)
+            return room_value if room_value != None else DEFAULT_LIGHT[key][time]
 
 
-def get_room_config(room, key):
-    time = get_time_string()
+def get_room_config(room, key, needs_lerp=False):
+    now, later, lerp = get_time_string()
+    
+    if not needs_lerp:
+        return get_room_config_time(room, key, now)
+
+    now_val = get_room_config_time(room, key, now)
+    later_val = get_room_config_time(room, key, later)
+
+    try:
+        return int((later_val - now_val) * lerp + now_val)
+    except:
+        return now_val
+
+def get_room_config_time(room, key, time):
     try: 
         return APP_CONFIG["rooms"][room][key][time]
     except:
@@ -161,7 +163,10 @@ def get_room_config(room, key):
             try:
                 return DEFAULT_ROOM[key][time]
             except:
-                return DEFAULT_ROOM[key]
+                try:
+                    return DEFAULT_ROOM[key]
+                except:
+                    return None
 
 
 def get_temp_controlled_lights(room):

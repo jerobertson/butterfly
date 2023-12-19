@@ -69,7 +69,7 @@ def get_lux_reactive_lights(room):
 def get_current_and_new_brightness(room, light, is_dimmer=False):
     try:
         current_brightness = int(state.getattr(light)["brightness"])
-        max_brightness = config_manager.get_light_config(room, light, "max_brightness")
+        max_brightness = config_manager.get_light_config(room, light, "max_brightness", needs_lerp=True)
         min_brightness = 25
         new_brightness = current_brightness * 0.9 if is_dimmer else current_brightness / 0.9
         clamped_brightness = int(max(min(new_brightness, max_brightness), min_brightness))

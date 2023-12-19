@@ -46,7 +46,7 @@ def turn_lights_on(room, night_mode, initial_timestamp):
     night_mode_brightness = 3
     night_mode_temperature = 2000
 
-    temperature = config_manager.get_room_config(room, "temperature")
+    temperature = config_manager.get_room_config(room, "temperature", needs_lerp=True)
 
     temp_controlled_lights = config_manager.get_temp_controlled_lights(room)
     hs_controlled_lights = config_manager.get_hs_controlled_lights(room)
@@ -68,7 +68,7 @@ def turn_lights_on(room, night_mode, initial_timestamp):
         to_enable = {}
         # temp lights
         for light in motion_activated_temp_controlled_lights:
-            brightness = config_manager.get_light_config(room, light, "max_brightness")
+            brightness = config_manager.get_light_config(room, light, "max_brightness", needs_lerp=True)
             to_enable.setdefault(brightness,[]).append(light)
         for brightness in to_enable.keys():
             service.call("light", "turn_on", entity_id=to_enable[brightness], brightness=brightness, kelvin=temperature, transition=1)
@@ -80,7 +80,7 @@ def turn_lights_on(room, night_mode, initial_timestamp):
         # other lights
         to_enable = {}
         for light in motion_activated_other_lights:
-            brightness = config_manager.get_light_config(room, light, "max_brightness")
+            brightness = config_manager.get_light_config(room, light, "max_brightness", needs_lerp=True)
             to_enable.setdefault(brightness,[]).append(light)
         for brightness in to_enable.keys():
             service.call("light", "turn_on", entity_id=to_enable[brightness], brightness=brightness, transition=1)

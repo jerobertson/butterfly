@@ -20,7 +20,7 @@ def tv_on(room):
     ignore = config_manager.get_tv_config(room, "ignore")
     to_dim = [light for light in config_manager.get_lights(room) if light not in ignore and light not in ambient and light not in bias]
 
-    temperature = config_manager.get_room_config(room, "temperature")
+    temperature = config_manager.get_room_config(room, "temperature", needs_lerp=True)
     transition = 5
 
     temp_controlled_lights = config_manager.get_temp_controlled_lights(room)
@@ -43,7 +43,7 @@ def tv_on(room):
     # temp lights
     to_enable = {}
     for light in temp_controlled_ambient_lights:
-        brightness = config_manager.get_light_config(room, light, "max_brightness")
+        brightness = config_manager.get_light_config(room, light, "max_brightness", needs_lerp=True)
         to_enable.setdefault(brightness,[]).append(light)
     for brightness in to_enable.keys():
         service.call("light", "turn_on", entity_id=to_enable[brightness], brightness=brightness, kelvin=temperature, transition=transition)
