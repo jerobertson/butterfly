@@ -65,12 +65,13 @@ DEFAULT_ROOM = {
 DEFAULT_TRANSITION_TIME = 60
 
 # TODO: Cache this properly in time file when it's created
-SUNSET = datetime.datetime.strptime(r.sub(r"+\1\2", state.get("sensor.sun_next_setting")), "%Y-%m-%dT%H:%M:%S%z").time()
+SUNSET = datetime.time(17)
 
-@pyscript_compile
 def init(config):
     global APP_CONFIG
+    global SUNSET
     APP_CONFIG = config
+    SUNSET = datetime.datetime.strptime(r.sub(r"+\1\2", state.get("sensor.sun_next_setting")), "%Y-%m-%dT%H:%M:%S%z").time()
 
 
 @pyscript_compile
