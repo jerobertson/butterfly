@@ -64,14 +64,32 @@ DEFAULT_ROOM = {
 
 DEFAULT_TRANSITION_TIME = 60
 
-# TODO: Cache this properly in time file when it's created
-SUNSET = datetime.time(17)
+# TODO: Make this configurable
+DEFAULT_TIME = {
+    "morning": 4,
+    "day": 10,
+    "evening": 17,
+    "night": 21
+}
 
 def init(config):
     global APP_CONFIG
     global SUNSET
+    global MORNING
+    global DAY
+    global EVENING
+    global NIGHT
     APP_CONFIG = config
     SUNSET = datetime.datetime.strptime(r.sub(r"+\1\2", state.get("sensor.sun_next_setting")), "%Y-%m-%dT%H:%M:%S%z").time()
+    MORNING = build_datetime(datetime.time(DEFAULT_TIME["morning"]))
+    DAY = build_datetime(datetime.time(DEFAULT_TIME["day"]))
+    EVENING = build_datetime(min(SUNSET, datetime.time(DEFAULT_TIME["evening"])))
+    NIGHT = build_datetime(datetime.time(DEFAULT_TIME["night"]))
+
+
+@pyscript_compile
+def build_datetime(time):
+    return datetime.datetime.combine(datetime.date.min, time)
 
 
 @pyscript_compile
@@ -85,24 +103,18 @@ def lerp_times(now, t1, t2):
     return ease_in_out_quad((now - t1) / (t2 - t1))
 
 
-# TODO: Extract get_time_string and helper functions into its own file
 @pyscript_compile
 def get_time_string():
-    now = datetime.datetime.combine(datetime.date.min, datetime.datetime.now().time())
+    now = build_datetime(datetime.datetime.now().time())
 
-    morning = datetime.datetime.combine(datetime.date.min, datetime.time(4))
-    day = datetime.datetime.combine(datetime.date.min, datetime.time(10))
-    evening = datetime.datetime.combine(datetime.date.min, min(SUNSET, datetime.time(17)))
-    night = datetime.datetime.combine(datetime.date.min, datetime.time(21))
-
-    if now < morning:
+    if now < MORNING:
         return ("night", "night", 0)
-    elif now < day:
-        return ("morning", "day", lerp_times(now, morning, day))
-    elif now < evening:
-        return ("day", "evening", lerp_times(now, day, evening))
-    elif now < night:
-        return ("evening", "night", lerp_times(now, evening, night))
+    elif now < DAY:
+        return ("morning", "day", lerp_times(now, MORNING, DAY))
+    elif now < EVENING:
+        return ("day", "evening", lerp_times(now, DAY, EVENING))
+    elif now < NIGHT:
+        return ("evening", "night", lerp_times(now, EVENING, NIGHT))
     else:
         return ("night", "night", 0)
 

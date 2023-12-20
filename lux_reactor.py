@@ -10,6 +10,11 @@ def init(cm, sm, m):
     motion = m
 
 
+@pyscript_compile
+def base_round(x, base=10):
+    return base * round(x/base)
+
+
 def react(room):
     log.debug(f"Butterfly is checking lux targets in '{room}'.")
 
@@ -35,23 +40,25 @@ def react(room):
 
     if target > current * 1.1:
         log.info(f"Butterfly thinks '{room}' is too dark; increasing brightness.")
-        change_lights(room, now, is_dimmer=False)
+        change_lights(room, now, delta="inc")
 
     elif current > target * 1.1:
         log.info(f"Butterfly thinks '{room}' is too bright; decreasing brightness.")
-        change_lights(room, now, is_dimmer=True)
+        change_lights(room, now, delta="dec")
 
     else:
         log.debug(f"Butterfly thinks '{room}' brightness is optimal.")
+        change_lights(room, now)
 
 
-def change_lights(room, now, is_dimmer=False):
+def change_lights(room, now, delta=None):
     lights = get_lux_reactive_lights(room)
 
     to_change = {}
     brightness_map = {}
     for light in lights:
-        current_brightness, new_brightness = get_current_and_new_brightness(room, light, is_dimmer)
+        current_brightness, new_brightness = get_current_and_new_brightness(room, light, delta)
+
         if new_brightness:
             to_change.setdefault(new_brightness,[]).append(light)
             brightness_map[new_brightness] = current_brightness
@@ -67,17 +74,33 @@ def get_lux_reactive_lights(room):
     return [light for light in motion_activated_lights if light in temp_controlled_lights and light not in hs_controlled_lights]
 
 
-def get_current_and_new_brightness(room, light, is_dimmer=False):
+def get_current_and_new_brightness(room, light, delta=None):
+    # TODO: Make these global variables / configurable
+    trim = 6
+    min_change = 12
+    max_change = 36
+    pct_change = 0.8
+    
     try:
         current_brightness = int(state.getattr(light)["brightness"])
         max_brightness = config_manager.get_light_config(room, light, "max_brightness", needs_lerp=True)
-        min_brightness = 25
-        new_brightness = current_brightness * 0.9 if is_dimmer else current_brightness / 0.9
-        clamped_brightness = int(max(min(new_brightness, max_brightness), min_brightness))
-        if clamped_brightness != current_brightness:
-            return (current_brightness, clamped_brightness)
-        else:
-            return (None, None)
+        min_brightness = 24 # TODO: Make this global / configurable
+
+        new_brightness = current_brightness
+        if delta == "dec":
+            min_dec = current_brightness - min_change
+            max_dec = current_brightness - max_change
+            pct_dec = current_brightness * pct_change
+            new_brightness = int(min(min_brightness, max(max_dec, min(min_dec, pct_dec))))
+        elif delta == "inc":
+            min_inc = current_brightness + min_change
+            max_inc = current_brightness + max_change
+            pct_inc = current_brightness / pct_change
+            new_brightness = int(min(max_brightness, max(min_inc, min(max_inc, pct_inc))))
+
+        clamped_brightness = base_round(new_brightness, base=trim)
+
+        return (current_brightness, current_brightness) if current_brightness == clamped_brightness else (current_brightness, clamped_brightness)
     except:
         return (None, None)
 
@@ -86,10 +109,12 @@ def transition_lights(room, to_change, brightness_map, initial_timestamp):
     transition_time = 30
     step = 6
 
+    temperature = config_manager.get_room_config(room, "temperature", needs_lerp=True)
+
     i = 0
     while i < transition_time and state_manager.get_room_state(room, initial_timestamp) == "on":
         for target_brightness in to_change.keys():
             lights = to_change[target_brightness]
             new_brightness = (target_brightness - brightness_map[target_brightness]) * ((i := i + step) / transition_time) + brightness_map[target_brightness]
-            service.call("light", "turn_on", entity_id=lights, brightness=new_brightness, transition=step-1)
+            service.call("light", "turn_on", entity_id=lights, brightness=new_brightness, kelvin=temperature, transition=step-1)
         task.sleep(step)
