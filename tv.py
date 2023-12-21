@@ -16,6 +16,8 @@ def is_cosy(room):
 def tv_on(room):
     log.info(f"Butterfly is watching TV in '{room}' at {datetime.datetime.now()}")
 
+    service.call("pyscript", "butterfly_reset_lighting", room=room)
+
     bias = config_manager.get_tv_config(room, "bias")
     ambient = config_manager.get_tv_config(room, "ambient")
     ignore = config_manager.get_tv_config(room, "ignore")
@@ -35,7 +37,7 @@ def tv_on(room):
     # Turn bias on
     to_enable = {}
     for light in bias:
-        brightness = config_manager.get_light_config(room, light, "max_brightness")
+        brightness = config_manager.get_tv_light_config(room, light, "max_brightness")
         to_enable.setdefault(brightness,[]).append(light)
     for brightness in to_enable.keys():
         service.call("light", "turn_on", entity_id=to_enable[brightness], brightness=brightness, kelvin=6500, transition=transition)
@@ -44,14 +46,14 @@ def tv_on(room):
     # temp lights
     to_enable = {}
     for light in temp_controlled_ambient_lights:
-        brightness = config_manager.get_light_config(room, light, "max_brightness", needs_lerp=True)
+        brightness = config_manager.get_tv_light_config(room, light, "max_brightness", needs_lerp=True)
         to_enable.setdefault(brightness,[]).append(light)
     for brightness in to_enable.keys():
         service.call("light", "turn_on", entity_id=to_enable[brightness], brightness=brightness, kelvin=temperature, transition=transition)
     # hs lights
     for light in hs_controlled_ambient_lights:
-        brightness = config_manager.get_light_config(room, light, "max_brightness")
-        hs = config_manager.get_light_config(room, light, "hs")
+        brightness = config_manager.get_tv_light_config(room, light, "max_brightness")
+        hs = config_manager.get_tv_light_config(room, light, "hs")
         service.call("light", "turn_on", entity_id=light, brightness=brightness, hs_color=hs, transition=transition)
 
     task.sleep(transition)
@@ -63,7 +65,10 @@ def tv_on(room):
 def tv_off(room):
     log.info(f"Butterfly stopped watching TV in '{room}' at {datetime.datetime.now()}")
 
+    motion_activated_lights = config_manager.get_motion_activated_lights(room)
     bias = config_manager.get_tv_config(room, "bias")
+    ambient = config_manager.get_tv_config(room, "ambient")
+    non_motion_lights = [light for light in config_manager.get_lights(room) if (light in bias or light in ambient) and light not in motion_activated_lights]
 
     service.call("pyscript", "butterfly_reset_lighting", room=room)
-    service.call("light", "turn_off", entity_id=bias, transition=10)
+    service.call("light", "turn_off", entity_id=non_motion_lights, transition=10)

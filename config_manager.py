@@ -68,22 +68,24 @@ DEFAULT_TRANSITION_TIME = 60
 DEFAULT_TIME = {
     "morning": 4,
     "day": 10,
-    "evening": 17,
-    "night": 21
+    "evening": 18,
+    "night": 23
 }
 
 def init(config):
     global APP_CONFIG
     global SUNSET
+    global DUSK
     global MORNING
     global DAY
     global EVENING
     global NIGHT
     APP_CONFIG = config
     SUNSET = datetime.datetime.strptime(r.sub(r"+\1\2", state.get("sensor.sun_next_setting")), "%Y-%m-%dT%H:%M:%S%z").time()
+    DUSK = datetime.datetime.strptime(r.sub(r"+\1\2", state.get("sensor.sun_next_dusk")), "%Y-%m-%dT%H:%M:%S%z").time()
     MORNING = build_datetime(datetime.time(DEFAULT_TIME["morning"]))
     DAY = build_datetime(datetime.time(DEFAULT_TIME["day"]))
-    EVENING = build_datetime(min(SUNSET, datetime.time(DEFAULT_TIME["evening"])))
+    EVENING = build_datetime(min(DUSK, datetime.time(DEFAULT_TIME["evening"])))
     NIGHT = build_datetime(datetime.time(DEFAULT_TIME["night"]))
 
 
@@ -99,8 +101,14 @@ def ease_in_out_quad(x):
 
 
 @pyscript_compile
+def ease_in_cubic(x):
+    # https://easings.net/#easeInCubic
+    return x * x * x
+
+
+@pyscript_compile
 def lerp_times(now, t1, t2):
-    return ease_in_out_quad((now - t1) / (t2 - t1))
+    return ease_in_cubic((now - t1) / (t2 - t1))
 
 
 @pyscript_compile
@@ -133,6 +141,14 @@ def get_lights(room):
         return [light for light in APP_CONFIG["rooms"][room]["lights"]]
     except:
         return []
+
+
+@pyscript_compile
+def get_tv_light_config(room, light, key, needs_lerp=False):
+    try:
+        return get_light_config(room, light, f"tv_{key}", needs_lerp)
+    except:
+        return get_light_config(room, light, key, needs_lerp)
 
 
 @pyscript_compile
@@ -200,17 +216,17 @@ def get_room_config_time(room, key, time):
 
 @pyscript_compile
 def get_temp_controlled_lights(room):
-    return [light for light in APP_CONFIG["rooms"][room]["lights"] if get_light_config(room, light, "temp_controlled")]
+    return [light for light in get_lights(room) if get_light_config(room, light, "temp_controlled")]
 
 
 @pyscript_compile
 def get_hs_controlled_lights(room):
-    return [light for light in APP_CONFIG["rooms"][room]["lights"] if get_light_config(room, light, "hs") is not None]
+    return [light for light in get_lights(room) if get_light_config(room, light, "hs") is not None]
 
 
 @pyscript_compile
 def get_motion_activated_lights(room):
-    return [light for light in APP_CONFIG["rooms"][room]["lights"] if get_light_config(room, light, "motion_activated")]
+    return [light for light in get_lights(room) if get_light_config(room, light, "motion_activated")]
 
 
 @pyscript_compile

@@ -85,6 +85,8 @@ def turn_lights_on(room, night_mode, initial_timestamp):
             to_enable.setdefault(brightness,[]).append(light)
         for brightness in to_enable.keys():
             service.call("light", "turn_on", entity_id=to_enable[brightness], brightness=brightness, transition=1)
+        # turn off any other lights
+        service.call("light", "turn_off", entity_id=[light for light in config_manager.get_lights(room) if light not in motion_activated_lights], transition=5)
 
     elif state_manager.get_room_state(room, initial_timestamp) in ["off", "dimming"]:
         log.debug(f"Butterfly is restoring the last known lighting in '{room}'.")
