@@ -51,7 +51,7 @@ def get_room_state(room, now):
 
 def store_lights(room):
     to_store = {} # Example: {153: ['light.study_ceiling']}
-    for light in [light for light in config_manager.get_lights(room) if state.get(light) == "on"]:
+    for light in [light for light in config_manager.get_lights(room) if light.startswith("light.") and state.get(light) == "on"]:
         attr = state.getattr(light)
         brightness = attr["brightness"] if "brightness" in attr else config_manager.get_light_config(room, light, "max_brightness", needs_lerp=True)
         to_store.setdefault(brightness,[]).append(light)
