@@ -78,13 +78,13 @@ def get_current_and_new_brightness(room, light, delta=None):
     # TODO: Make these global variables / configurable
     trim = 6
     min_change = 12
-    max_change = 36
+    max_change = 24
     pct_change = 0.8
     
     try:
-        current_brightness = int(state.getattr(light)["brightness"])
+        current_brightness = int(state.getattr(light)["brightness"]) if state.get(light) == "on" else 0
         max_brightness = config_manager.get_light_config(room, light, "max_brightness", needs_lerp=True)
-        min_brightness = 24 # TODO: Make this global / configurable
+        min_brightness = config_manager.get_light_config(room, light, "min_brightness", needs_lerp=True)
 
         new_brightness = current_brightness
         if delta == "dec":

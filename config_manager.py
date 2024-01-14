@@ -12,6 +12,12 @@ DEFAULT_LIGHT = {
         "evening": 154,
         "night": 128
     },
+    "min_brightness": {
+        "morning": 24,
+        "day": 24,
+        "evening": 24,
+        "night": 24
+    },
     "temp_controlled": {
         "morning": True,
         "day": True,
