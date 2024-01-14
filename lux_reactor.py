@@ -56,6 +56,7 @@ def change_lights(room, now, delta=None):
 
     to_change = {}
     brightness_map = {}
+    # TODO: Only change lights if they have a kelvin value, otherwise leave them alone
     for light in lights:
         current_brightness, new_brightness = get_current_and_new_brightness(room, light, delta)
 
@@ -100,7 +101,7 @@ def get_current_and_new_brightness(room, light, delta=None):
 
         clamped_brightness = base_round(new_brightness, base=trim)
 
-        return (current_brightness, current_brightness) if current_brightness == clamped_brightness else (current_brightness, clamped_brightness)
+        return (current_brightness, clamped_brightness)
     except:
         return (None, None)
 

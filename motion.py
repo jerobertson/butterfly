@@ -1,4 +1,7 @@
+from . import themes
+
 import datetime
+import random
 
 @pyscript_compile
 def init(cm, sm):
@@ -57,6 +60,8 @@ def turn_lights_on(room, night_mode, initial_timestamp):
     motion_activated_hs_controlled_lights = [light for light in motion_activated_lights if light in hs_controlled_lights]
     motion_activated_other_lights = [light for light in motion_activated_lights if light not in temp_controlled_lights and light not in hs_controlled_lights]
 
+    random_scene_lights = [light for light in motion_activated_temp_controlled_lights + motion_activated_hs_controlled_lights if config_manager.get_light_config(room, light, "random_scene_enabled") >= random.randint(1, 1000)]
+
     too_dark = not is_lux_met(room)
 
     if night_mode == "dim":
@@ -67,14 +72,21 @@ def turn_lights_on(room, night_mode, initial_timestamp):
     elif state_manager.get_room_state(room, initial_timestamp) == "expired" and too_dark:
         log.debug(f"Butterfly hasn't seen any movement in '{room}' for a while; setting default lighting.")
         to_enable = {}
+        
+        # random scene lights
+        for light in random_scene_lights:
+            brightness = config_manager.get_light_config(room, light, "max_brightness")
+            hs = themes.scene(config_manager.get_light_config(room, light, "random_scene"))
+            # hs = themes.synthwave()
+            service.call("light", "turn_on", entity_id=light, brightness=brightness, hs_color=hs, transition=1)
         # temp lights
-        for light in motion_activated_temp_controlled_lights:
+        for light in list(set(motion_activated_temp_controlled_lights) - set(random_scene_lights)):
             brightness = config_manager.get_light_config(room, light, "max_brightness", needs_lerp=True)
             to_enable.setdefault(brightness,[]).append(light)
         for brightness in to_enable.keys():
             service.call("light", "turn_on", entity_id=to_enable[brightness], brightness=brightness, kelvin=temperature, transition=1)
         # hs lights
-        for light in motion_activated_hs_controlled_lights:
+        for light in list(set(motion_activated_hs_controlled_lights) - set(random_scene_lights)):
             brightness = config_manager.get_light_config(room, light, "max_brightness")
             hs = config_manager.get_light_config(room, light, "hs")
             service.call("light", "turn_on", entity_id=light, brightness=brightness, hs_color=hs, transition=1)

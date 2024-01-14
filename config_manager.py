@@ -36,6 +36,12 @@ DEFAULT_LIGHT = {
         "evening": None,
         "night": None
     },
+    "random_scene_enabled": {
+        "morning": 0,
+        "day": 0,
+        "evening": 0,
+        "night": 0
+    } 
 }
 
 DEFAULT_TV = {

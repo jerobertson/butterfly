@@ -16,7 +16,7 @@ def is_cosy(room):
 def tv_on(room):
     log.info(f"Butterfly is watching TV in '{room}' at {datetime.datetime.now()}")
 
-    service.call("pyscript", "butterfly_reset_lighting", room=room)
+    state_manager.invalidate_cache(room)
 
     bias = config_manager.get_tv_config(room, "bias")
     ambient = config_manager.get_tv_config(room, "ambient")
