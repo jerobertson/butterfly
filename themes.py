@@ -27,6 +27,10 @@ def scene(theme):
         return lofi()
     elif theme == "indie":
         return indie()
+    elif theme == "romance":
+        return romance()
+    elif theme == "dining_chill":
+        return dining_chill()
     else:
         return synthwave()
 
@@ -85,3 +89,11 @@ def lofi():
 
 def indie():
     return random.choice([(312, 100), (347, 60), (312, 40), (50, 59), (15, 100), (50, 60), (179, 50), (318, 44), (333, 100), (11, 100), (31, 39)])
+
+
+def romance():
+    return random.choice([(307, 38), (267, 48), (287, 38), (327, 38), (347, 38)])
+
+
+def dining_chill():
+    return random.choice([(22.733, 63.137), (263.01, 80.784), (160, 43.529)])

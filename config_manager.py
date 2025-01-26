@@ -68,7 +68,7 @@ DEFAULT_ROOM = {
         "morning": 5500,
         "day": 4000,
         "evening": 3200,
-        "night": 2800
+        "night": 2600
     },
     "delay": 300,
     "night_mode": "ignore"
