@@ -15,22 +15,30 @@ def base_round(x, base=10):
     return base * round(x/base)
 
 
-def react(room):
-    log.debug(f"Butterfly is checking lux targets in '{room}'.")
-
-    task.sleep(5)
-
-    now = datetime.datetime.now()
+def can_transition_lights(room, now):
     night_mode = config_manager.get_night_mode(room)
     is_motion_disabled = motion.is_motion_disabled(room, night_mode)
     is_room_occupied = state_manager.get_room_state(room, now) == "on"
 
     if is_motion_disabled:
         log.debug(f"Butterfly won't adjust light levels; '{room}' is disabled.")
-        return
+        return False
 
     if not is_room_occupied:
         log.debug(f"Butterfly won't adjust light levels; '{room}' is not occupied.")
+        return False
+
+    return True
+
+
+def react(room):
+    log.debug(f"Butterfly is checking lux targets in '{room}'.")
+
+    task.sleep(5)
+
+    now = datetime.datetime.now()
+
+    if not can_transition_lights(room, now):
         return
 
     target = config_manager.get_room_config(room, "lux_targets", needs_lerp=True)
@@ -114,8 +122,12 @@ def transition_lights(room, to_change, brightness_map, initial_timestamp):
 
     i = 0
     while i < transition_time and state_manager.get_room_state(room, initial_timestamp) == "on":
+        if not can_transition_lights(room, datetime.datetime.now()):
+            return
+        
         for target_brightness in to_change.keys():
             lights = to_change[target_brightness]
             new_brightness = (target_brightness - brightness_map[target_brightness]) * ((i := i + step) / transition_time) + brightness_map[target_brightness]
             service.call("light", "turn_on", entity_id=lights, brightness=new_brightness, kelvin=temperature, transition=step-1)
+        
         task.sleep(step)
